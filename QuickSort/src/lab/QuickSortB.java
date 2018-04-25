@@ -34,7 +34,9 @@ public class QuickSortB extends QuickSort {
 	}
 	
 	private SortingItem getPivot(int left, int right, SortArray records, SortingItem l, SortingItem r) {
-		SortingItem m = records.getElementAt((int) Math.floor(left + (right - left) / 2));
+		int mIndex = (int) Math.floor(left + (right - left) / 2);
+		
+		SortingItem m = (mIndex == left) ? l : records.getElementAt(mIndex);
 		SortingItem t = null;
 		
 		// 'Sort' the three elements by doing two swaps if necessary, then return the middle (= median) one
