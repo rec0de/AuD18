@@ -5,7 +5,7 @@ package lab;
  * This class represents one entry of the list that has to be sorted.
  * 
  */
-public class SortingItem {
+public class SortingItem implements Comparable<SortingItem>{
 
 	// DO NOT modify
 	public String BookSerialNumber;
@@ -24,6 +24,9 @@ public class SortingItem {
 		this.Status = otherItem.Status;
 	}
 
-	// You may add additional methods here
+	@Override
+	public int compareTo(SortingItem arg0) {
+		return this.BookSerialNumber.compareTo(arg0.BookSerialNumber) == 0 ? this.ReaderID.compareTo(arg0.ReaderID): this.BookSerialNumber.compareTo(arg0.BookSerialNumber);
+	}
 
 }
