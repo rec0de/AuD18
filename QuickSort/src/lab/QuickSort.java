@@ -18,28 +18,49 @@ public abstract class QuickSort {
 		if(leftBound == rightBound)
 			return leftBound;
 		
+		SortingItem leftValue = records.getElementAt(leftBound);
+		SortingItem rightValue = records.getElementAt(rightBound);
+		
+		return partition(pivot, records, leftBound, rightBound, leftValue, rightValue);
+	}
+	
+	protected int partition(SortingItem pivot, SortArray records, int leftBound, int rightBound, SortingItem leftValue) {
+		
+		if(leftBound == rightBound)
+			return leftBound;
+
+		SortingItem rightValue = records.getElementAt(rightBound);
+		
+		return partition(pivot, records, leftBound, rightBound, leftValue, rightValue);
+	}
+	
+	protected int partition(SortingItem pivot, SortArray records, int leftBound, int rightBound, SortingItem leftValue, SortingItem rightValue) {
+		
+		if(leftBound == rightBound)
+			return leftBound;
+		
 		int leftIndex = leftBound;
 		int rightIndex = rightBound;
+		SortingItem temp;
 		
 		while(true){
-			while(leftIndex < rightBound && records.getElementAt(leftIndex).compareTo(pivot) < 0) {
+			while(leftIndex < rightBound && leftValue.compareTo(pivot) < 0) {
 				leftIndex += 1;
+				leftValue = records.getElementAt(leftIndex);
 			}
-			while(rightIndex > leftBound && records.getElementAt(rightIndex).compareTo(pivot) > 0) {
+			while(rightIndex > leftBound && rightValue.compareTo(pivot) > 0) {
 				rightIndex -= 1;
+				rightValue = records.getElementAt(rightIndex);
 			}
 			if(leftIndex >= rightIndex) {
 				return rightIndex;
 			}
 			
-			swap(leftIndex, rightIndex, records);
+			records.setElementAt(leftIndex, rightValue);
+			records.setElementAt(rightIndex, leftValue);
+			temp = rightValue;
+			rightValue = leftValue;
+			leftValue = temp;
 		}
 	}
-	
-	protected void swap(int i1, int i2, SortArray records) {
-		SortingItem temp = records.getElementAt(i1);
-		records.setElementAt(i1, records.getElementAt(i2));
-		records.setElementAt(i2, temp);
-	}
-
 }

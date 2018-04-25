@@ -25,7 +25,7 @@ public class QuickSortA extends QuickSort {
 			return;
 		
 		SortingItem pivot = records.getElementAt(left);
-		int p = partition(pivot, records, left, right);
+		int p = partition(pivot, records, left, right, pivot);
 		Quicksort(records, left, p);
 		Quicksort(records, p+1, right);
 	}

@@ -24,15 +24,16 @@ public class QuickSortB extends QuickSort {
 		if(right - left < 1)
 			return;
 		
-		SortingItem pivot = getPivot(left, right, records);
-		int p = partition(pivot, records, left, right);
+		SortingItem leftValue = records.getElementAt(left);
+		SortingItem rightValue = records.getElementAt(right);
+		
+		SortingItem pivot = getPivot(left, right, records, leftValue, rightValue);
+		int p = partition(pivot, records, left, right, leftValue, rightValue);
 		Quicksort(records, left, p);
 		Quicksort(records, p+1, right);
 	}
 	
-	private SortingItem getPivot(int left, int right, SortArray records) {
-		SortingItem l = records.getElementAt(left);
-		SortingItem r = records.getElementAt(right);
+	private SortingItem getPivot(int left, int right, SortArray records, SortingItem l, SortingItem r) {
 		SortingItem m = records.getElementAt((int) Math.floor(left + (right - left) / 2));
 		SortingItem t = null;
 		
