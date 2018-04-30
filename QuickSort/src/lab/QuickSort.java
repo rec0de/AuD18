@@ -6,9 +6,8 @@ import frame.SortArray;
  * Abstract superclass for the Quicksort algorithm.
  * 
  * Note: I got into a small optimization competition with a fellow student, trying
- * to get read and write ops to an absolute minimum. While this code does not include
- * most of the write optimizations for the sake of legibility, there is a fair bit of
- * passing local variables between functions to save a few read ops.
+ * to get read and write ops to an absolute minimum. Therefore, there is a fair bit of
+ * passing local variables between functions to save a few read/write ops.
  * I do believe this to be well within the rules of the assignment as values are not
  * cached in an array-like structure or passed between recursion levels.
  * All optimizations merely cut down on duplicate / unnecessary reads and writes.
@@ -84,6 +83,7 @@ public abstract class QuickSort {
 		
 		int leftIndex = leftBound;
 		int rightIndex = rightBound;
+		int pivotIndex = leftBound;
 		SortingItem temp;
 		
 		/*
@@ -94,18 +94,25 @@ public abstract class QuickSort {
 		 * the wrong part of the list is found, then swap that pair and continue
 		 */
 		while(true){
-			// As long as the items at left index are smaller than the pivot, they are on the right side
-			while(leftIndex < rightBound && leftValue.compareTo(pivot) < 0) {
+			// As long as the items at left index are smaller or equal than the pivot, they are on the right side
+			while(leftIndex < rightBound && leftValue.compareTo(pivot) <= 0) {
+				pivotIndex = leftValue.compareTo(pivot) == 0 ? leftIndex : pivotIndex; // 'Search for' the pivot index while traversing list to avoid passing the index as an argument
 				leftIndex += 1;
 				leftValue = records.getElementAt(leftIndex);
 			}
-			// Same for items at rightIndex larger than the pivot
-			while(rightIndex > leftBound && rightValue.compareTo(pivot) > 0) {
+			// Same for items at rightIndex larger or equal to than the pivot
+			while(rightIndex > leftBound && rightValue.compareTo(pivot) >= 0) {
+				pivotIndex = rightValue.compareTo(pivot) == 0 ? rightIndex : pivotIndex; // 'Search for' the pivot index while traversing list to avoid passing the index as an argument
 				rightIndex -= 1;
 				rightValue = records.getElementAt(rightIndex);
 			}
 			// As soon as both indices cross, no more swaps have to be made and the partition is complete
 			if(leftIndex >= rightIndex) {
+				// Swap the pivot if necessary (values equal to pivot are not swapped while partitioning)
+				if((pivotIndex > rightIndex && pivot.compareTo(rightValue) < 0) || (pivotIndex < rightIndex && pivot.compareTo(rightValue) > 0)) {
+					records.setElementAt(pivotIndex, rightValue);
+					records.setElementAt(rightIndex, pivot);
+				}
 				return rightIndex;
 			}
 			
