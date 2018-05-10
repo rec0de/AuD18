@@ -1,5 +1,9 @@
 package lab;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import frame.Entry;
@@ -15,6 +19,13 @@ import frame.Entry;
  */
 
 public class HashTable {
+	
+	private int capacity;
+	private int hashFunction; // 0: division, 1: folding, 2: mid_square
+	private int probingMode; // 0: linear, 1: quadratic
+	
+	private Entry[] data;
+	private int valueCount;
 
 	/**
 	 * The constructor
@@ -33,9 +44,11 @@ public class HashTable {
 	 *            assume a bucket factor of 1.
 	 */
 	public HashTable(int k, String hashFunction, String collisionResolution) {
-		/**
-		 * Add your code here
-		 */
+		this.data = new Entry[k];
+		this.hashFunction = 0; // TODO
+		this.probingMode = collisionResolution.equals("quadratic_probing") ? 1 : 0;
+		this.valueCount = 0;
+		this.capacity = k;
 	}
 
 	/**
@@ -53,10 +66,29 @@ public class HashTable {
 	 *         Hash-Table.
 	 */
 	public int loadFromFile(String filename) {
-		/**
-		 * Add your code here
-		 */
-		return 0;
+		try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+		    String line;
+		    String[] parts;
+		    int insertionCount = 0;
+		    
+		    while ((line = br.readLine()) != null) {
+		    	parts = line.split(";");
+		    	Entry entry = new Entry(parts[0], parts[1], parts[2]);
+
+		    	if(this.insert(entry))
+		    		insertionCount += 1;
+		    }
+		    
+		    System.out.println(insertionCount);
+		    
+		    return insertionCount;
+		} catch (FileNotFoundException e) {
+			System.out.println("File not found");
+			return 0;
+		} catch (IOException e) {
+			System.out.println("IO Exception");
+			return 0;
+		}
 	}
 
 	/**
@@ -72,10 +104,28 @@ public class HashTable {
 	 *         if the entry already exists in the Hash-Table
 	 */
 	public boolean insert(Entry insertEntry) {
-		/**
-		 * Add your code here
-		 */
-		return false;
+		int address = this.getHashAddr(insertEntry);
+		int base = address;
+		int i = 1;
+		while(this.data[address] != null && !this.data[address].isDeleted()) {
+			if(i > this.capacity || this.data[address].getKey().equals(insertEntry.getKey()))
+				return false;
+			address = this.getProbingAddr(base, i);
+			i += 1;
+		}
+		
+		if(this.data[address] == null)
+			this.valueCount += 1;
+		
+		this.data[address] = insertEntry;
+		
+		// Trigger rehash if load factor > 0.75
+		if(((double) this.valueCount) / this.capacity > 0.75)
+			this.rehash();
+		
+		System.out.println("Load: "+Double.toString(((double) this.valueCount) / this.capacity));
+		
+		return true;
 	}
 
 	/**
@@ -89,10 +139,22 @@ public class HashTable {
 	 *         the entry is not found in the Hash-Table
 	 */
 	public Entry delete(String deleteKey) {
-		/**
-		 * Add your code here
-		 */
-		return null;
+		int address = this.getHashAddr(deleteKey);
+		int base = address;
+		int i = 1;
+		while(this.data[address] != null && !this.data[address].getKey().equals(deleteKey)) {
+			if(i > this.capacity)
+				return null;
+			address = this.getProbingAddr(base, i);
+			i += 1;
+		}
+		
+		if(this.data[address] != null) {
+			this.data[address].markDeleted();
+			return this.data[address];
+		}
+		else
+			return null;
 	}
 
 	/**
@@ -106,10 +168,17 @@ public class HashTable {
 	 *         null if the entry is not found in the Hash-Table
 	 */
 	public Entry find(String searchKey) {
-		/**
-		 * Add your code here
-		 */
-		return null;
+		int address = this.getHashAddr(searchKey);
+		int base = address;
+		int i = 1;
+		while(this.data[address] != null && !this.data[address].getKey().equals(searchKey)) {
+			if(i > this.capacity)
+				return null;
+			address = this.getProbingAddr(base, i);
+			i += 1;
+		}
+		
+		return this.data[address].isDeleted() ? null : this.data[address];
 	}
 
 	/**
@@ -121,11 +190,44 @@ public class HashTable {
 	 * @return returns the output Hash-Table in directly interpretable dot code
 	 */
 	public ArrayList<String> getHashTable() {
-		/**
-		 * Add your code here
-		 */
-		return null;
+		ArrayList<String> dot = new ArrayList<String>();
+		dot.add("digraph {");
+		dot.add("splines=true;");
+		dot.add("nodesep=.01;");
+		dot.add("rankdir=LR;");
+		dot.add("node[fontsize=8,shape=record,height=.1;]");
+		String addressdef = "[fontsize=12,label=\"";
+		for(int i = 0; i < this.capacity; i++) {
+			addressdef += "<f"+Integer.toString(i)+">"+Integer.toString(i)+(i < this.capacity - 1 ? "|" : "");
+		}
+		addressdef += "\"];";
+		dot.add(addressdef);
+		
+		int j = 1;
+		for(int i = 0; i < this.capacity; i++) {
+			if(this.data[i] != null) {
+				String insertSequence = getInsertionSequence(this.data[i].getKey());
+				String line = "node"+Integer.toString(j)+"[label=\"{<l>" + this.data[i].getKey() + '|' + this.data[i].getData() + insertSequence + "}\"];";
+				dot.add(line);
+				System.out.println(line);
+				j += 1;
+			}
+		}
+		
+		j = 1;
+		for(int i = 0; i < this.capacity; i++) {
+			if(this.data[i] != null) {
+				String line = "ht:f"+Integer.toString(i)+"->node" + Integer.toString(j) + ":l;";
+				dot.add(line);
+				System.out.println(line);
+				j += 1;
+			}
+		}
+		
+		dot.add("}");
+		return dot;
 	}
+	
 
 	/**
 	 * This method increases the capacity of the Hash-Table and reorganizes it, in
@@ -137,8 +239,82 @@ public class HashTable {
 	 * increased to 1009, which is the closest primary number less than (101*10).
 	 */
 	private void rehash() {
-		/**
-		 * Add your code here
-		 */
+		
+		System.out.println("REHASH");
+		
+		int newSize = this.capacity * 10;
+		
+		while(!isPrime(newSize)) {
+			newSize -= 1;
+		}
+		
+		System.out.println(newSize);
+		
+		int oldSize = this.capacity;
+		Entry[] oldData = this.data;
+		
+		this.data = new Entry[newSize];
+		this.capacity = newSize;
+		
+		for(int i = 0; i < oldSize; i++) {
+			if(oldData[i] != null && !oldData[i].isDeleted()) {
+				this.insert(oldData[i]);
+			}
+		}
+	}
+	
+	private long decimalRepresentation(String value) {
+		char[] key = value.toCharArray();
+		String str = Integer.toString((int) key[0]) + Integer.toString((int) key[1]) + Integer.toString((int) key[2]) + Integer.toString((int) key[3]) + Integer.toString((int) key[4]);
+		return Long.parseLong(str);
+	}
+	
+	private int getHashAddr(Entry value) {
+		return this.getHashAddr(value.getKey());
+	}
+	
+	private int getHashAddr(String key) {
+		if(this.hashFunction == 0)
+			return this.divisionHash(key);
+		else
+			return 0;
+	}
+	
+	private int divisionHash(String value) {
+		long decimal = decimalRepresentation(value);
+		return Math.toIntExact(decimal % this.capacity);
+	}
+	
+	private int getProbingAddr(int base, int i) {
+		if(this.probingMode == 0)
+			return (base + i) % this.capacity;
+		else {
+			int nextTry = ((int)(base - Math.ceil(Math.pow(((float) i)/2, 2))*Math.pow(-1, i))) % this.capacity;
+			return nextTry < 0 ? nextTry + this.capacity : nextTry;
+		}
+	}
+	
+	private String getInsertionSequence(String searchKey) {
+		int address = this.getHashAddr(searchKey);
+		int base = address;
+		int i = 1;
+		String sequence = "";
+		while(this.data[address] != null && !this.data[address].getKey().equals(searchKey)) {
+			sequence += Integer.toString(address) + ", ";
+			address = this.getProbingAddr(base, i);
+			i += 1;
+		}
+		
+		return sequence.length() > 2 ? "|" + sequence.substring(0, sequence.length() - 2) : "";
+	}
+	
+	private boolean isPrime(int p) {
+		int i = 2;
+		while(i <= Math.sqrt(p)) {
+			if(p % i == 0)
+				return false;
+			i++;
+		}
+		return true;
 	}
 }
