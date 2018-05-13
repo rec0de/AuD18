@@ -377,6 +377,9 @@ public class HashTable {
 		// Convert sum back to string to cut off excess leading digits, then take mod capacity
 		String res = Integer.toString(sum);
 		return Integer.parseInt(res.substring(res.length() - addrLength, res.length())) % this.capacity;
+
+		// Just for fun, here's a ruby one-liner that does the exact same thing in about 2/3 of a tweet
+		// value.chars[0..4].map(&:ord).join.reverse.chars.each_slice(a=Math.log10(c=capacity).ceil).map.with_index{|e,i|e=e.join.ljust(a,"0");i%2==0? e.to_i: e.reverse.to_i}.sum%10**a%c
 	}
 	
 	/**
