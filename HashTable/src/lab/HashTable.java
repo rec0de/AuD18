@@ -46,7 +46,7 @@ public class HashTable {
 	 */
 	public HashTable(int k, String hashFunction, String collisionResolution) {
 		this.data = new Entry[k];
-		this.hashFunction = hashFunction.equals("mid_square") ? 2 : 0; // TODO
+		this.hashFunction = hashFunction.equals("mid_square") ? 2 : hashFunction.equals("folding") ? 1 : 0;
 		this.probingMode = collisionResolution.equals("quadratic_probing") ? 1 : 0;
 		this.valueCount = 0;
 		this.capacity = k;
@@ -277,6 +277,8 @@ public class HashTable {
 	private int getHashAddr(String key) {
 		if(this.hashFunction == 0)
 			return this.divisionHash(key);
+		else if(this.hashFunction == 1)
+			return this.foldingHash(key);
 		else if(this.hashFunction == 2)
 			return this.midSquareHash(key);
 		else
@@ -297,6 +299,31 @@ public class HashTable {
 		str = str.substring(str.length() - (9+addrLength), str.length() - 9);
 		System.out.println(str);
 		return Integer.parseInt(str) % this.capacity;
+	}
+	
+	private int foldingHash(String value) {
+		int addrLength = (int) Math.ceil(Math.log10(this.capacity));
+		String str = Long.toString(decimalRepresentation(value));
+		
+		// Padd with zeroes to multiple of address length
+		while(str.length() % addrLength != 0) {
+			str = "0" + str;
+		}
+		
+		int sum = 0;
+		boolean reverse = true;
+		String part;
+
+		for(int i = 0; i < str.length(); i += addrLength) {
+			part = str.substring(str.length() - (i + addrLength), str.length() - i);
+			if(reverse)
+				part = new StringBuilder(part).reverse().toString();
+			sum += Integer.parseInt(part);
+			reverse = !reverse;
+		}
+		
+		String res = Integer.toString(sum);
+		return Integer.parseInt(res.substring(res.length() - addrLength, res.length())) % this.capacity;
 	}
 	
 	private int getProbingAddr(int base, int i) {
