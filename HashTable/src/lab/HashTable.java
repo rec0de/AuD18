@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 
 import frame.Entry;
@@ -45,7 +46,7 @@ public class HashTable {
 	 */
 	public HashTable(int k, String hashFunction, String collisionResolution) {
 		this.data = new Entry[k];
-		this.hashFunction = 0; // TODO
+		this.hashFunction = hashFunction.equals("mid_square") ? 2 : 0; // TODO
 		this.probingMode = collisionResolution.equals("quadratic_probing") ? 1 : 0;
 		this.valueCount = 0;
 		this.capacity = k;
@@ -276,6 +277,8 @@ public class HashTable {
 	private int getHashAddr(String key) {
 		if(this.hashFunction == 0)
 			return this.divisionHash(key);
+		else if(this.hashFunction == 2)
+			return this.midSquareHash(key);
 		else
 			return 0;
 	}
@@ -283,6 +286,17 @@ public class HashTable {
 	private int divisionHash(String value) {
 		long decimal = decimalRepresentation(value);
 		return Math.toIntExact(decimal % this.capacity);
+	}
+	
+	private int midSquareHash(String value) {
+		int addrLength = (int) Math.ceil(Math.log10(this.capacity));
+		System.out.println("AddrLen: "+addrLength);
+		BigInteger dec = BigInteger.valueOf(decimalRepresentation(value));
+		BigInteger sqr = dec.pow(2);
+		String str = sqr.toString();
+		str = str.substring(str.length() - (9+addrLength), str.length() - 9);
+		System.out.println(str);
+		return Integer.parseInt(str) % this.capacity;
 	}
 	
 	private int getProbingAddr(int base, int i) {
