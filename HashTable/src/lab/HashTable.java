@@ -112,7 +112,7 @@ public class HashTable {
 		// Find a free or deleted slot to insert the entry
 		while(this.data[address] != null && !this.data[address].isDeleted()) {
 			// Don't insert if there is no more space (this shouldn't happen due to auto-rehashing) or if the key is already present
-			if(i > this.capacity || this.data[address].getKey().equals(insertEntry.getKey()))
+			if(i > Math.pow(this.capacity, 2) || this.data[address].getKey().equals(insertEntry.getKey())) // The try cutoff of n² is pretty much trial and error - definitely safe for linear probing, not sure about quadratic
 				return false;
 			i += 1;
 			address = this.getProbingAddr(base, i);
