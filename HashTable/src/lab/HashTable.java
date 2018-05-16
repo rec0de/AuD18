@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 import frame.Entry;
 
@@ -50,6 +51,7 @@ public class HashTable {
 		this.probingMode = collisionResolution.equals("quadratic_probing") ? 1 : 0;
 		this.valueCount = 0;
 		this.capacity = k;
+		System.out.println("CONSTRUCTOR CALLED "+hashFunction+" "+collisionResolution);
 	}
 
 	/**
@@ -107,15 +109,15 @@ public class HashTable {
 	public boolean insert(Entry insertEntry) {
 		int address = this.getHashAddr(insertEntry);
 		int base = address;
-		int i = 1;
+		int i = 0;
 		
 		// Find a free or deleted slot to insert the entry
 		while(this.data[address] != null && !this.data[address].isDeleted()) {
 			// Don't insert if there is no more space (this shouldn't happen due to auto-rehashing) or if the key is already present
 			if(i > this.capacity || this.data[address].getKey().equals(insertEntry.getKey()))
 				return false;
-			address = this.getProbingAddr(base, i);
 			i += 1;
+			address = this.getProbingAddr(base, i);
 		}
 		
 		// If we are using a previously unused slot, increase the valueCount for accurate load calculation
@@ -124,6 +126,8 @@ public class HashTable {
 		
 		// Save the entry
 		this.data[address] = insertEntry;
+		
+		//System.out.println("Inserting at "+address+" on try "+i+": "+insertEntry.getKey());
 		
 		// Trigger rehash if load factor > 0.75
 		if(((double) this.valueCount) / this.capacity > 0.75)
@@ -211,10 +215,10 @@ public class HashTable {
 		dot.add("splines=true;");
 		dot.add("nodesep=.01;");
 		dot.add("rankdir=LR;");
-		dot.add("node[fontsize=8,shape=record,height=.1;]");
+		dot.add("node[fontsize=8,shape=record,height=.1];");
 		
 		// Generate definition for address boxes / labels
-		String addressdef = "[fontsize=12,label=\"";
+		String addressdef = "ht[fontsize=12,label=\"";
 		for(int i = 0; i < this.capacity; i++) {
 			addressdef += "<f"+Integer.toString(i)+">"+Integer.toString(i)+(i < this.capacity - 1 ? "|" : "");
 		}
@@ -244,6 +248,12 @@ public class HashTable {
 		
 		// Finally, add a closing bracket
 		dot.add("}");
+		
+		// Dump dot code for debugging
+		System.out.println("BEGIN DATA DUMP");
+		System.out.println(this.capacity + (this.hashFunction == 1 ? " folding " : this.hashFunction == 2 ? " midSquare " : " division ")+(this.probingMode == 0 ? "linear" : "quadratic"));
+		System.out.println(dot.stream().collect(Collectors.joining("\n")));
+		System.out.println("END DATA DUMP");
 		return dot;
 	}
 	
@@ -265,6 +275,8 @@ public class HashTable {
 		while(!isPrime(newSize)) {
 			newSize -= 1;
 		}
+		
+		System.out.println("REHASH: "+newSize);
 		
 		// Save old HashTable
 		int oldSize = this.capacity;
@@ -394,7 +406,7 @@ public class HashTable {
 			return (base + i) % this.capacity;
 		else {
 			// i-th try in quadratic mode is ([home address] - ceil((i/2)² * (-1)^i) mod capacity
-			int nextTry = ((int)(base - Math.ceil(Math.pow(((float) i)/2, 2))*Math.pow(-1, i))) % this.capacity;
+			int nextTry = ((int)(base - Math.ceil(Math.pow(((double) i)/2, 2))*Math.pow(-1, i))) % this.capacity;
 			return nextTry < 0 ? nextTry + this.capacity : nextTry; // Add capacity to result if negative
 		}
 	}
