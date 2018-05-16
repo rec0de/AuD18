@@ -6,7 +6,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.stream.Collectors;
 
 import frame.Entry;
 
@@ -51,7 +50,6 @@ public class HashTable {
 		this.probingMode = collisionResolution.equals("quadratic_probing") ? 1 : 0;
 		this.valueCount = 0;
 		this.capacity = k;
-		System.out.println("CONSTRUCTOR CALLED "+hashFunction+" "+collisionResolution);
 	}
 
 	/**
@@ -133,7 +131,7 @@ public class HashTable {
 		if(((double) this.valueCount) / this.capacity > 0.75)
 			this.rehash();
 		
-		// System.out.println("Load: "+Double.toString(((double) this.valueCount) / this.capacity));
+		//System.out.println("Load: "+Double.toString(((double) this.valueCount) / this.capacity));
 		
 		return true;
 	}
@@ -249,11 +247,6 @@ public class HashTable {
 		// Finally, add a closing bracket
 		dot.add("}");
 		
-		// Dump dot code for debugging
-		System.out.println("BEGIN DATA DUMP");
-		System.out.println(this.capacity + (this.hashFunction == 1 ? " folding " : this.hashFunction == 2 ? " midSquare " : " division ")+(this.probingMode == 0 ? "linear" : "quadratic"));
-		System.out.println(dot.stream().collect(Collectors.joining("\n")));
-		System.out.println("END DATA DUMP");
 		return dot;
 	}
 	
@@ -276,8 +269,6 @@ public class HashTable {
 			newSize -= 1;
 		}
 		
-		System.out.println("REHASH: "+newSize);
-		
 		// Save old HashTable
 		int oldSize = this.capacity;
 		Entry[] oldData = this.data;
@@ -285,6 +276,7 @@ public class HashTable {
 		// Create new HashTable
 		this.data = new Entry[newSize];
 		this.capacity = newSize;
+		this.valueCount = 0; // I spent DAYS figuring out I missed this line. Turns out it _is_ important
 		
 		// Loop over old table and insert all found values into the new table
 		for(int i = 0; i < oldSize; i++) {
