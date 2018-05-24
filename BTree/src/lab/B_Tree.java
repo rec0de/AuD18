@@ -117,10 +117,14 @@ public class B_Tree {
     
        
     public Entry delete(String deleteKey) {
-        /**
-         * Add your code here
-    	   */ 
-    	return new Entry();
+    	Entry dummy = new Entry(deleteKey, "", "");
+
+    	Entry res = root.delete(dummy);
+    	if(root.getCurrentLoad() == 0) {
+    		this.root = root.getPointer(0);
+    	}
+    	//System.out.println("Delete successfull: "+deleteKey);
+    	return res;
     }
 
     /**
@@ -151,6 +155,7 @@ public class B_Tree {
         res.add("node[shape=record];");
         root.getDotCode(1, true, res);
         res.add("}");
+        System.out.println(res.stream().map(Object::toString).collect(Collectors.joining("\n")));
     	return res;
     }
 
