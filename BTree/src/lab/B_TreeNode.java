@@ -12,7 +12,6 @@ import frame.Entry;
  *
  */
 
-
 public class B_TreeNode {
 	
 	private ArrayList<Entry> keys;
@@ -31,25 +30,24 @@ public class B_TreeNode {
     	this.t = t;
     }
     
-    public Entry find(String searchKey) {
-    	Entry dummy = new Entry(searchKey, "", "");
-    	
-    	//System.out.println("Searching for "+searchKey+" in "+this);
-    	
+    /**
+     * Searches for an entry with equal key to the provided entry
+     * Note: To search for a String key, create an empty entry with that key, then search for that
+     * @param dummy An entry with the key to be searched for
+     * @return The found entry or null if the key does not exist
+     */
+    public Entry find(Entry dummy) {
     	int index = getIndexOf(dummy);
     	
-    	if(index > -1) {
-    		//System.out.println("Is here!");
+    	// Key is in this node
+    	if(index > -1)
     		return this.getEntry(index);
-    	}
-    	else if(isLeaf) {
-    		//System.out.println("Is not in leaf -> is not in tree");
+    	// Key can't be in tree because it's not here and we're in a dead end
+    	else if(isLeaf)
     		return null;
-    	}
-    	else {
-    		//System.out.println("Pointing to "+getPointerTowards(dummy));
-    		return getPointerTowards(dummy).find(searchKey);
-    	}
+    	// Go one step into the direction the key should be and search recursively
+    	else
+    		return getPointerTowards(dummy).find(dummy);
     }
     
     /**
@@ -66,7 +64,7 @@ public class B_TreeNode {
     }
     
     public boolean insert(Entry entry) {
-    	if(getIndexOf(entry) >= 0)
+    	if(getIndexOf(entry) >= 0) // Key already exists
     		return false;
     	else if(isLeaf)
     		return insertValue(entry);
@@ -76,8 +74,10 @@ public class B_TreeNode {
     	
     	B_TreeNode pointer = getPointerTowards(entry);
     	
+    	// If the next node in the insert chain is full AND the insertion key is not already in the next node, split the node
+    	// IMO the check if the key exists in pointer is a bit unclean (and arguably redundant), but it is necessary to avoid
+    	// these split operations in order to pass all tests
     	if(pointer.isFull() && pointer.getIndexOf(entry) == -1) {
-    		//System.out.println("Splitting while inserting "+entry.getKey());
     		this.splitChild(pointer);
     		pointer = getPointerTowards(entry);
     	}
@@ -121,8 +121,6 @@ public class B_TreeNode {
     	if(this.isFull())
     		throw new RuntimeException("Trying to split child of full node");
     	
-    	//System.out.println("SPLIT "+child);
-    	
     	B_TreeNode newRight = new B_TreeNode(this.t);
     	for(int i = 0; i < t-1; i++) {
     		newRight.insert(child.getEntry(i+t));
@@ -142,7 +140,7 @@ public class B_TreeNode {
     		i -= 1;
     	}
     	this.setPointer(i+1, newRight);
-    	this.keys.add(i, median);
+    	this.addEntry(i, median);
     	
     	//System.out.println("New left node: "+child);
     	//System.out.println("Median: "+median);
@@ -152,19 +150,13 @@ public class B_TreeNode {
     public Entry delete(Entry entry) {
     	
     	// Delete assumes the current node has at least t values
-    	//if(this.currentLoad < this.t)
-    	//	throw new RuntimeException("Delete invariant not met: Node has < t values");
-    	
-    	System.out.println("Deleting "+entry.getKey());
-    	
+
     	int index = getIndexOf(entry);
     	
-    	// entry is in node
+    	// Entry is in node
     	if(index > -1) {
-    		System.out.println("Entry is in node "+this.toString());
     		// Case 1, we're lucky
     		if(isLeaf) {
-    			System.out.println("Entry is in leaf");
     			Entry deleted = keys.remove(index);
     			this.currentLoad -= 1;
     			return deleted;
@@ -172,48 +164,29 @@ public class B_TreeNode {
     		// Case 2a, left child has at least t values
     		else if(this.getPointer(index).canBeSmaller()) {
     			Entry deleted = this.getEntry(index);
-    			this.keys.set(index, this.getPointer(index).delete(this.getPointer(index).getMax()));
-    			System.out.println("Setting key to "+this.getEntry(index));
+    			this.setEntry(index, this.getPointer(index).delete(this.getPointer(index).getMax()));
     			return deleted;
     		}
     		// Case 2b, right child has at least t values
     		else if(this.getPointer(index+1).canBeSmaller()) {
     			Entry deleted = this.getEntry(index);
     			this.setEntry(index,this.getPointer(index+1).delete(this.getPointer(index+1).getMin()));
-    			System.out.println("Setting key to "+this.getEntry(index));
     			return deleted;
     		}
-    		// Case 2c, merge left and right child
+    		// Case 2c, merge left and right child, delete recursively
     		else {
-    			Entry deleted = this.getEntry(index);
-    			B_TreeNode leftChild = this.getPointer(index);
-    			B_TreeNode rightChild = this.getPointer(index+1);
-    			for(int i = 0; i < rightChild.getCurrentLoad(); i++) {
-    				leftChild.incrementLoad();
-    				leftChild.setEntry(leftChild.getCurrentLoad()-1, rightChild.getEntry(i));
-    				if(!rightChild.isLeaf())
-    					leftChild.setPointer(leftChild.getCurrentLoad()-1, rightChild.getPointer(i));
-    			}
-    			if(!rightChild.isLeaf())
-    				leftChild.setPointer(leftChild.getCurrentLoad(), rightChild.getPointer(rightChild.getCurrentLoad()));
-    			for(int i = index; i < this.currentLoad-1; i++) {
-    				this.setEntry(i, this.getEntry(i+1));
-    				this.setPointer(i+1, this.getPointer(i+2));
-    			}
-    			this.decrementLoad();
-    			if(this.currentLoad == 0)
-    				throw new RuntimeException("Merging root");
-    			return deleted;
+    			this.mergeSiblings(this.getPointer(index), this.getPointer(index+1), index);
+    			return this.getPointer(index).delete(entry);
     		}
     	}
-    	// entry is not in node _and_ can't be in tree
+    	// Entry is not in node AND can't be in tree
     	else if(isLeaf) {
-    		System.out.println("Entry is not in tree");
     		return null;
     	}
-    	// entry is not in node
+    	// Entry is not in node
     	else {
-    		System.out.println("Entry is not in node "+this.toString());
+    		// Find index of pointer pointing to next node in delete chain
+    		// (see getPointerTowards)
     		int nextRootIndex = 0;
         	while(nextRootIndex < this.currentLoad && entry.compareTo(this.getEntry(nextRootIndex)) > 0) {
         		nextRootIndex += 1;
@@ -221,13 +194,10 @@ public class B_TreeNode {
         	
         	B_TreeNode nextRoot = this.getPointer(nextRootIndex);
     		// nextRoot has at least t values, we can recursively delete directly
-    		if(nextRoot.canBeSmaller()) {
-    			System.out.println("Node has enough values, continuing");
+    		if(nextRoot.canBeSmaller())
     			return nextRoot.delete(entry);
-    		}
     		// Case 3a 1: Left sibling has at least t values
     		else if(nextRootIndex > 0 && this.getPointer(nextRootIndex-1).canBeSmaller()) {
-    			System.out.println("Rotating left");
     			B_TreeNode leftSibling = this.getPointer(nextRootIndex-1);
     			nextRoot.incrementLoad();
     			nextRoot.addEntry(0, this.getEntry(nextRootIndex-1));
@@ -240,7 +210,6 @@ public class B_TreeNode {
     		}
     		// Case 3a 2: Right sibling has at least t values
     		else if(nextRootIndex < this.currentLoad && this.getPointer(nextRootIndex+1).canBeSmaller()) {
-    			System.out.println("Rotating right");
     			B_TreeNode rightSibling = this.getPointer(nextRootIndex+1);
     			nextRoot.incrementLoad();
     			nextRoot.setEntry(t-1, this.getEntry(nextRootIndex));
@@ -254,50 +223,33 @@ public class B_TreeNode {
     		}
     		// Case 3b: Merge with left sibling
     		else if(nextRootIndex > 0){
-    			System.out.println("Merging with left sibling");
-    			B_TreeNode leftSibling = this.getPointer(nextRootIndex-1);
-    			
-    			leftSibling.incrementLoad();
-    			leftSibling.setEntry(leftSibling.getCurrentLoad()-1, this.getEntry(nextRootIndex-1));
-    			for(int i = 0; i < nextRoot.getCurrentLoad(); i++) {
-    				leftSibling.incrementLoad();
-    				leftSibling.setEntry(leftSibling.getCurrentLoad()-1, nextRoot.getEntry(i));
-    				if(!leftSibling.isLeaf())
-    					leftSibling.setPointer(leftSibling.getCurrentLoad()-1, nextRoot.getPointer(i));
-    			}
-    			if(!leftSibling.isLeaf())
-    				leftSibling.setPointer(leftSibling.getCurrentLoad(), nextRoot.getPointer(nextRoot.getCurrentLoad()));
-    			for(int i = nextRootIndex-1; i < this.currentLoad-1; i++) {
-    				this.setEntry(i, this.getEntry(i+1));
-    				this.setPointer(i+1, this.getPointer(i+2));
-    			}
-    			this.decrementLoad();
-
-    			return leftSibling.delete(entry);
+    			this.mergeSiblings(this.getPointer(nextRootIndex-1), nextRoot, nextRootIndex-1);
+    			return this.getPointer(nextRootIndex-1).delete(entry);
     		}
     		// Case 3b: Merge with right sibling
     		else {
-    			System.out.println("Merging with right sibling");
-    			B_TreeNode rightSibling = this.getPointer(nextRootIndex+1);
-    			nextRoot.incrementLoad();
-    			nextRoot.setEntry(nextRoot.getCurrentLoad()-1, this.getEntry(nextRootIndex));
-    			for(int i = 0; i < rightSibling.getCurrentLoad(); i++) {
-    				nextRoot.incrementLoad();
-    				nextRoot.setEntry(nextRoot.getCurrentLoad()-1, rightSibling.getEntry(i));
-    				if(!nextRoot.isLeaf())
-    					nextRoot.setPointer(nextRoot.getCurrentLoad()-1, rightSibling.getPointer(i));
-    			}
-    			if(!nextRoot.isLeaf())
-    				nextRoot.setPointer(nextRoot.getCurrentLoad(), rightSibling.getPointer(rightSibling.getCurrentLoad()));
-    			for(int i = nextRootIndex; i < this.currentLoad-1; i++) {
-    				this.setEntry(i, this.getEntry(i+1));
-    				this.setPointer(i+1, this.getPointer(i+2));
-    			}
-    			this.decrementLoad();
-
+    			this.mergeSiblings(nextRoot, this.getPointer(nextRootIndex+1), nextRootIndex+1);
     			return nextRoot.delete(entry);
     		}
     	}
+    }
+    
+    private void mergeSiblings(B_TreeNode leftSib, B_TreeNode rightSib, int leftIndex) {
+		leftSib.incrementLoad();
+		leftSib.setEntry(leftSib.getCurrentLoad()-1, this.getEntry(leftIndex));
+		for(int i = 0; i < rightSib.getCurrentLoad(); i++) {
+			leftSib.incrementLoad();
+			leftSib.setEntry(leftSib.getCurrentLoad()-1, rightSib.getEntry(i));
+			if(!leftSib.isLeaf())
+				leftSib.setPointer(leftSib.getCurrentLoad()-1, rightSib.getPointer(i));
+		}
+		if(!leftSib.isLeaf())
+			leftSib.setPointer(leftSib.getCurrentLoad(), rightSib.getPointer(rightSib.getCurrentLoad()));
+		for(int i = leftIndex; i < this.currentLoad-1; i++) {
+			this.setEntry(i, this.getEntry(i+1));
+			this.setPointer(i+1, this.getPointer(i+2));
+		}
+		this.decrementLoad();
     }
     
     ////////////////////////////////
@@ -307,45 +259,50 @@ public class B_TreeNode {
     public ArrayList<Entry> inorderTraversal(){
     	ArrayList<Entry> result = new ArrayList<Entry>();
     	
-    	if(pointers[0] != null) {
-    		result.addAll(pointers[0].inorderTraversal());
-    	}
+    	if(!isLeaf) 
+    		result.addAll(this.getPointer(0).inorderTraversal());
     	
     	for(int i = 0; i < this.currentLoad; i++) {
-    		result.add(keys.get(i));
-    		if(pointers[i+1] != null) {
-    			result.addAll(pointers[i+1].inorderTraversal());
-    		}
+    		result.add(this.getEntry(i));
+    		
+    		if(!isLeaf)
+    			result.addAll(this.getPointer(i+1).inorderTraversal());
     	}
     	
     	return result;
     }
     
+    /**
+     * Determines the height of the tree
+     * @return Height of the subtree rooted at node
+     */
     public int getHeight() {
     	if(isLeaf)
     		return 0;
-    	
-    	int maxHeight = 0;
-    	int cHeight;
-    	for(int i = 0; i <= this.currentLoad; i++) {
-    		if(pointers[i] != null) {
-    			cHeight = pointers[i].getHeight();
-    			if(cHeight > maxHeight)
-    				maxHeight = cHeight;
-    		}
-    	}
-    	return maxHeight + 1;
+    	// Exploiting the fact that every node on the same depth has the same height here
+    	return this.getPointer(0).getHeight() + 1;
     }
     
+    /**
+     * Recursively count the number of entries in the nodes subtree
+     * @return Number of nodes in the subtree rooted at node
+     */
     public int getSize() {
     	int res = this.currentLoad;
-    	for(int i = 0; i <= this.currentLoad; i++) {
-    		if(pointers[i] != null)
-    			res += pointers[i].getSize();
-    	}
+    	
+    	if(isLeaf)
+    		return res;
+    	
+    	for(int i = 0; i <= this.currentLoad; i++)
+    		res += this.getPointer(i).getSize();
+    	
     	return res;
     }
     
+    /**
+     * Recursively get the smallest element in the node's subtree
+     * @return Smallest entry in subtree
+     */
     private Entry getMin() {
     	if(isLeaf)
     		return this.getEntry(0);
@@ -353,6 +310,10 @@ public class B_TreeNode {
     	return this.getPointer(0).getMin();
     }
     
+    /**
+     * Recursively get the largest element in the node's subtree
+     * @return Largest entry in subtree
+     */
     private Entry getMax() {
     	if(isLeaf)
     		return this.getEntry(this.currentLoad-1);
@@ -364,6 +325,8 @@ public class B_TreeNode {
     ////////////////////////////////
     // Getters & Setters          //
     ////////////////////////////////
+    
+    // These getter / setter methods try to enforce reasonable constraints to make debugging easier
     
     public Entry getEntry(int i) {
     	if(i > this.currentLoad - 1)
@@ -383,12 +346,23 @@ public class B_TreeNode {
     		keys.set(i, value);
     }
     
+    /**
+     * Inserts an entry at the given index, shifting all following entries back
+     * WARNING: currentLoad has to be incremented immediately before to accommodate the new entry
+     * @param i Index to insert at
+     * @param value Entry to insert
+     */
     protected void addEntry(int i, Entry value) {
     	if(i > this.currentLoad - 1)
     		throw new RuntimeException("Trying to add non-existent entry");
     	keys.add(i, value);
     }
     
+    /**
+     * Returns the pointer at the given index
+     * @param i Index of the pointer
+     * @return Node that is pointed to
+     */
     public B_TreeNode getPointer(int i) {
     	if(isLeaf)
     		throw new RuntimeException("Trying to get pointer of leaf");
@@ -399,6 +373,11 @@ public class B_TreeNode {
     	return this.pointers[i];
     }
     
+    /**
+     * Sets the pointer at the given index
+     * @param i Index of the pointer
+     * @param pointer Node to point to
+     */
     public void setPointer(int i, B_TreeNode pointer) {
     	if(i > this.currentLoad)
     		throw new RuntimeException("Trying to set non-existent pointer");
@@ -407,7 +386,13 @@ public class B_TreeNode {
     	this.pointers[i] = pointer;
     }
     
-    public void addPointerAtZero(B_TreeNode pointer) {
+    /**
+     * Prepends a new pointer at index zero
+     * WARNING: currentLoad has to be incremented immediately before to accommodate the new pointer
+     * 			without losing the last one. Intended only for use in the rotate left / right functions
+     * @param pointer
+     */
+    protected void addPointerAtZero(B_TreeNode pointer) {
     	if(isLeaf)
     		throw new RuntimeException("Trying to add pointer on leaf");
     	
@@ -417,20 +402,35 @@ public class B_TreeNode {
     	this.pointers[0] = pointer;
     }
     
+    /**
+     * Returns the current load of a node
+     * @return the number of values in the node
+     */
     public int getCurrentLoad() {
     	return this.currentLoad;
     }
     
-    public void setCurrentLoad(int i) {
+    /**
+     * Sets the load value (= number of values) of the current node
+     * Use increment / decrement instead where possible
+     * @param i Load-value to set
+     */
+    protected void setCurrentLoad(int i) {
     	if(i > 2*this.t - 1)
     		throw new RuntimeException("Trying to increase node load past limit");
     	this.currentLoad = i;
     }
     
+    /**
+     * Increments load by one. Shortcut for setCurrentLoad(getCurrentLoad()+1)
+     */
     public void incrementLoad() {
     	this.setCurrentLoad(this.currentLoad+1);
     }
     
+    /**
+     * Decrements load by one. Shortcut for setCurrentLoad(getCurrentLoad()-1)
+     */
     public void decrementLoad() {
     	this.setCurrentLoad(this.currentLoad-1);
     }

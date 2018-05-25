@@ -89,7 +89,7 @@ public class B_Tree {
      *                 false if the entry already exists in the B-Tree
 	 */
     public boolean insert(Entry insertEntry) {
-
+   
     	if(root.isFull()) {
     		B_TreeNode newRoot = new B_TreeNode(this.t);
     		newRoot.makeNonLeaf();
@@ -114,16 +114,16 @@ public class B_Tree {
 	 * @return returns the deleted entry if the deletion ends successfully       
      *                 null if the entry is not found in the B-Tree
 	 */
-    
-       
     public Entry delete(String deleteKey) {
+    	// delete operates on entries, not strings, therefore we create a dummy entry with the key we're deleting
     	Entry dummy = new Entry(deleteKey, "", "");
 
     	Entry res = root.delete(dummy);
-    	if(root.getCurrentLoad() == 0) {
+    	// If the root is empty, but there are still values in the tree, redefine the root
+    	if(root.getCurrentLoad() == 0 && !root.isLeaf()) {
     		this.root = root.getPointer(0);
     	}
-    	System.out.println("Delete successfull: "+deleteKey);
+
     	return res;
     }
 
@@ -137,7 +137,9 @@ public class B_Tree {
      *                 null if the entry is not found in the B-Tree
 	 */
     public Entry find(String searchKey) {
-        return root.find(searchKey);
+    	// find operates on entries, not strings, therefore we create a dummy entry with the key we're searching
+    	Entry dummy = new Entry(searchKey, "", "");
+        return root.find(dummy);
     }
     
     /**
@@ -155,7 +157,7 @@ public class B_Tree {
         res.add("node[shape=record];");
         root.getDotCode(1, true, res);
         res.add("}");
-        System.out.println(res.stream().map(Object::toString).collect(Collectors.joining("\n")));
+        //System.out.println(res.stream().map(Object::toString).collect(Collectors.joining("\n")));
     	return res;
     }
 
@@ -177,9 +179,7 @@ public class B_Tree {
 	 * @return returns the entries stored in the B-Tree in ascending order
 	 */
     public ArrayList<Entry> getInorderTraversal() {
-    	ArrayList<Entry> res = root.inorderTraversal();
-    	System.out.println(res.stream().map(Object::toString).collect(Collectors.joining(", ")));
-    	return res;
+    	return root.inorderTraversal();
     }
 
     /**
