@@ -19,25 +19,16 @@ public class B_TreeNode {
 	private B_TreeNode[] pointers;
 	private int currentLoad = 0;
 	private boolean isLeaf = true;
-	private boolean isRoot = false;
 	private final int t;
 
     /**
 	* The constructor
-	* 
 	* @param t minimum degree of the B-tree
 	*/
     public B_TreeNode(int t) {
     	keys = new ArrayList<Entry>(t*2-1);
     	pointers = new B_TreeNode[t*2];
     	this.t = t;
-    }
-    
-    public B_TreeNode(int t, boolean isRoot) {
-    	keys = new ArrayList<Entry>(t*2-1);
-    	pointers = new B_TreeNode[t*2];
-    	this.t = t;
-    	this.isRoot = isRoot;
     }
     
     public Entry find(String searchKey) {
@@ -61,6 +52,11 @@ public class B_TreeNode {
     	}
     }
     
+    /**
+     * Finds the first index within the node that has the same key as the given entry
+     * @param entry The entry key to find
+     * @return Index of the entry if present, -1 otherwise
+     */
     public int getIndexOf(Entry entry) {
     	for(int i = 0; i < this.currentLoad; i++) {
     		if(entry.compareTo(this.getEntry(i)) == 0)
@@ -70,15 +66,18 @@ public class B_TreeNode {
     }
     
     public boolean insert(Entry entry) {
-    	if(isLeaf)
-    		return getIndexOf(entry) > 0 ? false : insertValue(entry);
+    	if(getIndexOf(entry) >= 0)
+    		return false;
+    	else if(isLeaf)
+    		return insertValue(entry);
     	
     	if(this.isFull())
     		throw new RuntimeException("Insert expects non-full root node");
     	
     	B_TreeNode pointer = getPointerTowards(entry);
     	
-    	if(pointer.isFull()) {
+    	if(pointer.isFull() && pointer.getIndexOf(entry) == -1) {
+    		//System.out.println("Splitting while inserting "+entry.getKey());
     		this.splitChild(pointer);
     		pointer = getPointerTowards(entry);
     	}
@@ -96,7 +95,7 @@ public class B_TreeNode {
     		i += 1;
     	}
     	
-    	this.setCurrentLoad(this.currentLoad + 1);
+    	this.incrementLoad();
     	this.keys.add(i, entry);
     	
     	return true;
@@ -110,6 +109,9 @@ public class B_TreeNode {
     	while(i < this.currentLoad && entry.compareTo(this.keys.get(i)) > 0) {
     		i += 1;
     	}
+    	
+    	if(i < this.currentLoad && entry.compareTo(this.keys.get(i)) == 0)
+    		throw new RuntimeException("Trying to get pointer to key equal to a key in this node");
     	
     	if(pointers[i] == null)
     		throw new RuntimeException("Non-leaf node with capacity "+currentLoad+" does not have pointer "+i);
@@ -137,7 +139,7 @@ public class B_TreeNode {
     	Entry median = child.getEntry(t-1);
     	child.setCurrentLoad(t-1);
     	int i = this.currentLoad;
-    	this.setCurrentLoad(this.currentLoad + 1);
+    	this.incrementLoad();
     	while(pointers[i] != child) {
     		this.setPointer(i+1, pointers[i]);
     		i -= 1;
@@ -153,8 +155,8 @@ public class B_TreeNode {
     public Entry delete(Entry entry) {
     	
     	// Delete assumes the current node has at least t values
-    	if(this.currentLoad < this.t)
-    		throw new RuntimeException("Delete invariant not met: Node has < t values");
+    	//if(this.currentLoad < this.t)
+    	//	throw new RuntimeException("Delete invariant not met: Node has < t values");
     	
     	System.out.println("Deleting "+entry.getKey());
     	
@@ -181,6 +183,7 @@ public class B_TreeNode {
     		else if(pointers[index+1].canBeSmaller()) {
     			Entry deleted = this.getEntry(index);
     			this.keys.set(index, pointers[index+1].delete(pointers[index+1].getMin()));
+    			System.out.println("Setting key to "+this.getEntry(index+1));
     			return deleted;
     		}
     		// Case 2c, merge left and right child
@@ -189,7 +192,7 @@ public class B_TreeNode {
     			B_TreeNode leftChild = pointers[index];
     			B_TreeNode rightChild = pointers[index+1];
     			for(int i = 0; i < rightChild.getCurrentLoad(); i++) {
-    				leftChild.setCurrentLoad(leftChild.getCurrentLoad()+1);
+    				leftChild.incrementLoad();
     				leftChild.setEntry(leftChild.getCurrentLoad()-1, rightChild.getEntry(i));
     				if(!rightChild.isLeaf())
     					leftChild.setPointer(leftChild.getCurrentLoad()-1, rightChild.getPointer(i));
@@ -208,6 +211,7 @@ public class B_TreeNode {
     	}
     	// entry is not in node _and_ can't be in tree
     	else if(isLeaf) {
+    		System.out.println("Entry is not in tree");
     		return null;
     	}
     	// entry is not in node
@@ -225,29 +229,42 @@ public class B_TreeNode {
     			return nextRoot.delete(entry);
     		}
     		// Case 3a 1: Left sibling has at least t values
-    		else if(nextRootIndex > 1 && pointers[nextRootIndex-1].canBeSmaller()) {
+    		else if(nextRootIndex > 1 && this.getPointer(nextRootIndex-1).canBeSmaller()) {
     			System.out.println("Rotating left");
-    			nextRoot.setCurrentLoad(this.t);
-    			nextRoot.setEntry(t-1, this.keys.get(nextRootIndex-1));
-    			this.keys.set(nextRootIndex-1, pointers[nextRootIndex-1].delete(pointers[nextRootIndex-1].getEntry(pointers[nextRootIndex-1].getCurrentLoad()-1)));
+    			B_TreeNode leftSibling = this.getPointer(nextRootIndex-1);
+    			nextRoot.incrementLoad();
+    			nextRoot.addEntry(0, this.getEntry(nextRootIndex-1));
+    			
+    			if(!leftSibling.isLeaf())
+    				nextRoot.addPointerAtZero(leftSibling.getPointer(leftSibling.getCurrentLoad()));
+    			
+    			this.keys.set(nextRootIndex-1, leftSibling.getEntry(leftSibling.getCurrentLoad()-1));
+    			leftSibling.uncleanDeleteLast();
     			return nextRoot.delete(entry);
     		}
     		// Case 3a 2: Right sibling has at least t values
-    		else if(nextRootIndex <= this.currentLoad && pointers[nextRootIndex+1].canBeSmaller()) {
+    		else if(nextRootIndex < this.currentLoad && this.getPointer(nextRootIndex+1).canBeSmaller()) {
     			System.out.println("Rotating right");
-    			nextRoot.setCurrentLoad(this.t);
-    			nextRoot.setEntry(t-1, this.keys.get(nextRootIndex));
-    			this.keys.set(nextRootIndex, pointers[nextRootIndex+1].delete(pointers[nextRootIndex+1].getEntry(0)));
+    			B_TreeNode rightSibling = this.getPointer(nextRootIndex+1);
+    			nextRoot.incrementLoad();
+    			nextRoot.setEntry(t-1, this.getEntry(nextRootIndex));
+    			
+    			if(!rightSibling.isLeaf())
+    				nextRoot.setPointer(t, rightSibling.getPointer(0));
+    			
+    			this.setEntry(nextRootIndex, rightSibling.getEntry(0));
+    			rightSibling.uncleanDeleteFirst();
     			return nextRoot.delete(entry);
     		}
     		// Case 3b: Merge with left sibling
     		else if(nextRootIndex > 1){
     			System.out.println("Merging with left sibling");
-    			B_TreeNode leftSibling = pointers[nextRootIndex-1];
-    			leftSibling.setCurrentLoad(leftSibling.getCurrentLoad()+1);
+    			B_TreeNode leftSibling = this.getPointer(nextRootIndex-1);
+    			
+    			leftSibling.incrementLoad();
     			leftSibling.setEntry(leftSibling.getCurrentLoad()-1, this.getEntry(nextRootIndex-1));
     			for(int i = 0; i < nextRoot.getCurrentLoad(); i++) {
-    				leftSibling.setCurrentLoad(leftSibling.getCurrentLoad()+1);
+    				leftSibling.incrementLoad();
     				leftSibling.setEntry(leftSibling.getCurrentLoad()-1, nextRoot.getEntry(i));
     				if(!leftSibling.isLeaf())
     					leftSibling.setPointer(leftSibling.getCurrentLoad()-1, nextRoot.getPointer(i));
@@ -259,20 +276,17 @@ public class B_TreeNode {
     				this.setPointer(i+1, this.getPointer(i+2));
     			}
     			this.setCurrentLoad(this.currentLoad - 1);
-    			
-    			if(this.currentLoad == 0)
-    				throw new RuntimeException("Merging root");
 
     			return leftSibling.delete(entry);
     		}
     		// Case 3b: Merge with right sibling
     		else {
     			System.out.println("Merging with right sibling");
-    			B_TreeNode rightSibling = pointers[nextRootIndex+1];
-    			nextRoot.setCurrentLoad(nextRoot.getCurrentLoad()+1);
+    			B_TreeNode rightSibling = this.getPointer(nextRootIndex+1);
+    			nextRoot.incrementLoad();
     			nextRoot.setEntry(nextRoot.getCurrentLoad()-1, this.getEntry(nextRootIndex));
     			for(int i = 0; i < rightSibling.getCurrentLoad(); i++) {
-    				nextRoot.setCurrentLoad(nextRoot.getCurrentLoad()+1);
+    				nextRoot.incrementLoad();
     				nextRoot.setEntry(nextRoot.getCurrentLoad()-1, rightSibling.getEntry(i));
     				if(!nextRoot.isLeaf())
     					nextRoot.setPointer(nextRoot.getCurrentLoad()-1, rightSibling.getPointer(i));
@@ -284,9 +298,6 @@ public class B_TreeNode {
     				this.setPointer(i+1, this.getPointer(i+2));
     			}
     			this.setCurrentLoad(this.currentLoad - 1);
-    			
-    			if(this.currentLoad == 0)
-    				throw new RuntimeException("Merging root");
 
     			return nextRoot.delete(entry);
     		}
@@ -376,13 +387,19 @@ public class B_TreeNode {
     		keys.set(i, value);
     }
     
+    protected void addEntry(int i, Entry value) {
+    	if(i > this.currentLoad - 1)
+    		throw new RuntimeException("Trying to add non-existent entry");
+    	keys.add(i, value);
+    }
+    
     public B_TreeNode getPointer(int i) {
     	if(isLeaf)
     		throw new RuntimeException("Trying to get pointer of leaf");
     	if(i > this.currentLoad)
     		throw new RuntimeException("Trying to get non-existent pointer");
     	if(this.pointers[i] == null)
-    		throw new RuntimeException("Pointer "+i+" should exist but doesn't. Load: "+this.currentLoad);
+    		throw new RuntimeException("Pointer "+i+" should exist but doesn't. Load: "+this.currentLoad+" Node: "+this.toString());
     	return this.pointers[i];
     }
     
@@ -392,6 +409,16 @@ public class B_TreeNode {
     	if(isLeaf)
     		throw new RuntimeException("Trying to set pointer on leaf");
     	this.pointers[i] = pointer;
+    }
+    
+    public void addPointerAtZero(B_TreeNode pointer) {
+    	if(isLeaf)
+    		throw new RuntimeException("Trying to add pointer on leaf");
+    	
+    	for(int i = 0; i < this.currentLoad; i++) {
+    		this.pointers[i+1] = this.pointers[i];
+    	}
+    	this.pointers[0] = pointer;
     }
     
     public int getCurrentLoad() {
@@ -404,22 +431,78 @@ public class B_TreeNode {
     	this.currentLoad = i;
     }
     
+    public void incrementLoad() {
+    	this.setCurrentLoad(this.currentLoad+1);
+    }
+    
+    /**
+     * Marks a node a non-leaf
+     * Note that nodes can (intentionally) never be made a leaf again once they are an inner node
+     */
     public void makeNonLeaf() {
     	this.isLeaf = false;
+    }
+    
+    /**
+     * Erases the first entry and pointer (if present) from a node
+     * WARNING: This assumes the first entry/pointer has previously been moved somewhere else
+     * 			If this is not ensured, data will be lost!
+     */
+    protected void uncleanDeleteFirst() {
+    	if(this.currentLoad < t)
+    		throw new RuntimeException("Trying unclean delete on node with less than t values");
+    	
+    	// Remove the first entry, shifting the following ones forward
+    	this.keys.remove(0);
+    	
+    	// Move pointers forward, overwriting the first
+    	if(!isLeaf) {
+    		for(int i = 0; i < this.currentLoad; i++) {
+        		this.setPointer(i, this.getPointer(i+1));
+        	}
+    	}
+    	this.setCurrentLoad(this.currentLoad-1);
+    }
+    
+    /**
+     * Erases the last entry and pointer (if present) from a node
+     * WARNING: This assumes the last entry/pointer has previously been moved somewhere else
+     * 			If this is not ensured, data will be lost!
+     */
+    protected void uncleanDeleteLast() {
+    	if(this.currentLoad < t)
+    		throw new RuntimeException("Trying unclean delete on node with less than t values");
+    	
+    	// No need to really delete values as they are the last
+    	// Mark unusable by decrementing currentLoad
+    	this.setCurrentLoad(this.currentLoad-1);
     }
     
     ////////////////////////////////
     // Attributes                 //
     ////////////////////////////////
     
+    /**
+     * Checks if a node is full
+     * @return True if no more values can be inserted into the node
+     */
     public boolean isFull() {
     	return this.currentLoad >= this.t * 2 - 1;
     }
     
+    /**
+     * Checks if a node can have a value removed without violating the BTree constraints
+     * (e.g. if the node has at least t values)
+     * @return True if a value can be removed from the node, false otherwise
+     */
     public boolean canBeSmaller() {
     	return this.currentLoad >= this.t;
     }
     
+    /**
+     * Checks if the node is a leaf
+     * @return True if the node is a leaf
+     */
     public boolean isLeaf() {
     	return this.isLeaf;
     }
@@ -428,29 +511,41 @@ public class B_TreeNode {
     // Serializing                //
     ////////////////////////////////
     
+    
     public String toString() {
     	String res = "";
     	for(int i = 0; i < this.currentLoad; i++) {
-    		res += keys.get(i).getKey() + ", ";
+    		res += this.getEntry(i).getKey() + ", ";
     	}
     	return "["+res+"]";
     }
     
+    /**
+     * Adds a dot code representation of this nodes subtree to the given list
+     * @param index The index of the highest-numbered node
+     * @param isRoot True if the current node is to be treated as the root node, false otherwise
+     * @param list The list to add dot code lines to
+     * @return The last used node index
+     */
     public int getDotCode(int index, boolean isRoot, ArrayList<String> list){
     	String name = (isRoot ? "root" : "node"+index);
+    	
+    	// Assemble line describing this node
     	String selfNode = name+"[label=\"<f0>*";
     	for(int i = 0; i < this.currentLoad*2; i += 2) {
-    		selfNode += "|<f"+i+">"+keys.get(i/2).getKey()+"|<f"+(i+1)+">*";
+    		selfNode += "|<f"+(i+1)+">"+this.getEntry(i/2).getKey()+"|<f"+(i+2)+">*";
     	}
     	selfNode += "\"];";
     	list.add(selfNode);
     	
+    	// Abort here if node has no children
     	if(isLeaf)
     		return index;
     	
+    	// Recursively add child subtrees and links to child nodes
     	for(int i = 0; i <= this.currentLoad; i++) {
     		list.add(name+":f"+(i*2)+"->node"+(index+1));
-    		index = pointers[i].getDotCode(index+1, false, list);
+    		index = this.getPointer(i).getDotCode(index+1, false, list);
     	}
     	
     	return index;

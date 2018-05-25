@@ -123,7 +123,7 @@ public class B_Tree {
     	if(root.getCurrentLoad() == 0) {
     		this.root = root.getPointer(0);
     	}
-    	//System.out.println("Delete successfull: "+deleteKey);
+    	System.out.println("Delete successfull: "+deleteKey);
     	return res;
     }
 
