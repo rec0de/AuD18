@@ -328,6 +328,11 @@ public class B_TreeNode {
     
     // These getter / setter methods try to enforce reasonable constraints to make debugging easier
     
+    /**
+     * Returns the entry at position i of the node
+     * @param i Index of the entry to get
+     * @return Entry at position i
+     */
     public Entry getEntry(int i) {
     	if(i > this.currentLoad - 1)
     		throw new RuntimeException("Trying to get non-existent entry");
@@ -337,9 +342,15 @@ public class B_TreeNode {
     	return res;
     }
     
+    /**
+     * Sets the i-th entry of the node
+     * @param i Index of the entry to set
+     * @param value Entry to set
+     */
     public void setEntry(int i, Entry value) {
     	if(i > this.currentLoad- 1)
     		throw new RuntimeException("Trying to set non-existent entry");
+    	// keys.set might fail if the node capacity has been expanded, use add in that case
     	if(this.keys.size() <= i)
     		keys.add(value);
     	else
