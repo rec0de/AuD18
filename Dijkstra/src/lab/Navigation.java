@@ -1,6 +1,17 @@
 package lab;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.stream.Collectors;
 
 /**
  * The class Navigation finds the shortest (and/or) path between points on a map
@@ -12,11 +23,14 @@ public class Navigation {
 	 * not on the map -3 if both source and destination points are not on the
 	 * map -4 if no path can be found between source and destination
 	 */
-
 	public static final int SOURCE_NOT_FOUND = -1;
 	public static final int DESTINATION_NOT_FOUND = -2;
 	public static final int SOURCE_DESTINATION_NOT_FOUND = -3;
 	public static final int NO_PATH = -4;
+	
+	private HashMap<String, Vertex> vertices;
+	private LinkedList<Vertex> vertexList;
+	private ArrayList<Edge> edges;
 
 	/**
 	 * The constructor takes a filename as input, it reads that file and fill
@@ -26,8 +40,45 @@ public class Navigation {
 	 *            name of the file containing the input map
 	 */
 	public Navigation(String filename) {
-		//TODO Add you code here
-
+		
+		this.vertices = new HashMap<String, Vertex>();
+		this.vertexList = new LinkedList<Vertex>();
+		this.edges = new ArrayList<Edge>();
+		
+		try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+		    String line;
+		    ArrayList<String> edges = new ArrayList<String>();
+		    
+		    // Read all lines
+		    while ((line = br.readLine()) != null) {
+		    	// Process vertices first, save edges for later
+		    	if(line.matches(".* -> .*;")) {
+		    		edges.add(line);
+		    	}
+		    	else if(line.matches(".*\\[label.*\\];")) {
+		    		String[] info = line.replaceFirst("^.*\\[label=\"", "").replaceFirst("\".*$", "").split(",");
+		    		Vertex vertex = new Vertex(info[0], Double.parseDouble(info[1]));
+		    		this.vertices.put(info[0], vertex);
+		    		this.vertexList.add(vertex);
+		    		//System.out.println("Parse vertex "+info[0]+" ("+info[1]+")");
+		    	}	
+		    }
+		    
+		    for(String edgeString: edges) {
+		    	String[] info = edgeString.replaceFirst(" -> ", ",").replaceFirst(" \\[label=\"", ",").replaceFirst("\".*$", "").split(",");
+		    	Vertex origin = this.vertices.get(info[0]);
+		    	Vertex destination = this.vertices.get(info[1]);
+		    	Edge edge = new Edge(origin, destination, Double.parseDouble(info[2]), Double.parseDouble(info[3]));
+		    	origin.addOutgoing(edge);
+		    	destination.addIncoming(edge);
+		    	this.edges.add(edge);
+		    	//System.out.println("Parse edge "+info[0]+"->"+info[1]);
+		    }
+		} catch (FileNotFoundException e) {
+			System.out.println("File not found");
+		} catch (IOException e) {
+			System.out.println("IO Exception");
+		}
 	}
 
 	/**
@@ -46,15 +97,19 @@ public class Navigation {
 	 * @param A
 	 *            Source
 	 * @param B
-	 *            Destinaton
+	 *            Destination
 	 * @return returns a map as described above if A or B is not on the map or
 	 *         if there is no path between them the original map is to be
 	 *         returned.
 	 */
 	public ArrayList<String> findShortestRoute(String A, String B) {
-		//TODO  Add you code here
+		Vertex a = this.vertices.get(A);
+		Vertex b = this.vertices.get(B);
 		
-		return new ArrayList<>(); // dummy, replace
+		if(a != null && b != null)
+			this.dijkstra(a, b, false, true);
+		
+		return this.toDotCode();
 	}
 
 	/**
@@ -73,15 +128,19 @@ public class Navigation {
 	 * @param A
 	 *            Source
 	 * @param B
-	 *            Destinaton
+	 *            Destination
 	 * @return returns a map as described above if A or B is not on the map or
 	 *         if there is no path between them the original map is to be
 	 *         returned.
 	 */
 	public ArrayList<String> findFastestRoute(String A, String B) {
-		//TODO Add you code here
+		Vertex a = this.vertices.get(A);
+		Vertex b = this.vertices.get(B);
 		
-		return new ArrayList<>(); // dummy, replace
+		if(a != null && b != null)
+			this.dijkstra(a, b, true, true);
+		
+		return this.toDotCode();
 	}
 
 	/**
@@ -99,15 +158,27 @@ public class Navigation {
 	 *         the map NO_PATH if no path can be found between point A and point
 	 *         B
 	 */
-	public int findShortestDistance(String A, String B) {
-		//TODO Add you code here
-		int sd = 0; 
-
-		return sd;
+	public int findShortestDistance(String pointA, String pointB) {
+		Vertex source = this.vertices.get(pointA);
+		Vertex destination = this.vertices.get(pointB);
+		
+		if(source == null && destination == null)
+			return Navigation.SOURCE_DESTINATION_NOT_FOUND;
+		else if(source == null)
+			return Navigation.SOURCE_NOT_FOUND;
+		else if(destination == null)
+			return Navigation.DESTINATION_NOT_FOUND;
+		
+		try {
+			return (int) Math.ceil(this.dijkstra(source, destination, false, false));
+		}
+		catch(RuntimeException e) {
+			return Navigation.NO_PATH;
+		}
 	}
 
 	/**
-	 * Find the fastest route between A and B using the dijkstra algorithm.
+	 * Find the fastest route between A and B using the Dijkstra algorithm.
 	 * 
 	 * @param A
 	 *            Source
@@ -120,10 +191,85 @@ public class Navigation {
 	 *         A and point B
 	 */
 	public int findFastestTime(String pointA, String pointB) {
-		//TODO Add you code here
-		int ft = 0;
-
-		return ft;
+		
+		Vertex source = this.vertices.get(pointA);
+		Vertex destination = this.vertices.get(pointB);
+		
+		if(source == null && destination == null)
+			return Navigation.SOURCE_DESTINATION_NOT_FOUND;
+		else if(source == null)
+			return Navigation.SOURCE_NOT_FOUND;
+		else if(destination == null)
+			return Navigation.DESTINATION_NOT_FOUND;
+		
+		try {
+			return (int) Math.ceil(this.dijkstra(source, destination, true, false));
+		}
+		catch(RuntimeException e) {
+			return Navigation.NO_PATH;
+		}
+	}
+	
+	public double dijkstra(Vertex origin, Vertex destination, boolean optimizeTime, boolean embolden) {
+		HashMap<String, Double> distance = new HashMap<String, Double>();
+		HashMap<String, Vertex> prev = new HashMap<String, Vertex>();
+		
+		if(embolden) {
+			for(Edge edge: this.edges) {
+				edge.resetBold();
+			}
+		}
+		
+		Queue<Vertex> queue = new LinkedList<Vertex>();
+		queue.addAll(this.vertexList);
+		
+		distance.put(origin.getName(), optimizeTime ? -origin.waitTime() : 0.0);
+		
+		while(queue.size() > 0) {
+			Vertex min = Collections.min(queue, (Vertex a, Vertex b) -> (distance.get(a.getName()) == null ? 1 : distance.get(b.getName()) == null ? -1 : distance.get(a.getName()).compareTo(distance.get(b.getName()))));
+			queue.remove(min);
+			
+			System.out.println("Expanding vertex "+min.getName());
+			
+			for(Edge outgoing: min.getOutgoing()) {
+				if(min == destination || distance.get(min.getName()) == null)
+					break;
+				
+				double newDist = distance.get(min.getName()).doubleValue() + (optimizeTime ? outgoing.time() + min.waitTime() : outgoing.distance());
+				if(distance.get(outgoing.to.getName()) == null || distance.get(outgoing.to.getName()).doubleValue() > newDist) {
+					System.out.println("Found new shortest path to "+outgoing.to.getName());
+					distance.put(outgoing.to.getName(), newDist);
+					prev.put(outgoing.to.getName(), min);
+				}
+			}
+		}
+		
+		if(distance.get(destination.getName()) == null)
+			throw new RuntimeException("Destination node unreachable");
+		
+		if(embolden) {
+			Vertex current = destination;
+			while(prev.get(current.getName()) != null) {
+				prev.get(current.getName()).getEdgeTo(current.getName()).embolden();
+				current = prev.get(current.getName());
+			}
+		}
+		
+		return distance.get(destination.getName());
+	}
+	
+	public ArrayList<String> toDotCode(){
+		ArrayList<String> res = new ArrayList<String>();
+		res.add("digraph {");
+		for(Edge edge: this.edges) {
+			res.add(edge.toDotCode());
+		}
+		for(Vertex vertex: this.vertexList) {
+			res.add(vertex.toDotCode());
+		}
+		res.add("}");
+		System.out.println(res.stream().map(Object::toString).collect(Collectors.joining("\n")));
+		return res;
 	}
 
 }
