@@ -137,7 +137,7 @@ public class Navigation {
 		Vertex a = this.vertices.get(A);
 		Vertex b = this.vertices.get(B);
 		
-		if(a != null && b != null)
+		if(a != null && b != null) 
 			this.dijkstra(a, b, true, true);
 		
 		return this.toDotCode();
@@ -169,12 +169,12 @@ public class Navigation {
 		else if(destination == null)
 			return Navigation.DESTINATION_NOT_FOUND;
 		
-		try {
-			return (int) Math.ceil(this.dijkstra(source, destination, false, false));
-		}
-		catch(RuntimeException e) {
+		double dist = this.dijkstra(source, destination, false, false);
+		
+		if(dist == Double.POSITIVE_INFINITY)
 			return Navigation.NO_PATH;
-		}
+		else
+			return (int) Math.ceil(dist);
 	}
 
 	/**
@@ -202,12 +202,12 @@ public class Navigation {
 		else if(destination == null)
 			return Navigation.DESTINATION_NOT_FOUND;
 		
-		try {
-			return (int) Math.ceil(this.dijkstra(source, destination, true, false));
-		}
-		catch(RuntimeException e) {
+		double time = this.dijkstra(source, destination, true, false);
+		
+		if(time == Double.POSITIVE_INFINITY)
 			return Navigation.NO_PATH;
-		}
+		else
+			return (int) Math.ceil(time);
 	}
 	
 	public double dijkstra(Vertex origin, Vertex destination, boolean optimizeTime, boolean embolden) {
@@ -229,7 +229,7 @@ public class Navigation {
 			Vertex min = Collections.min(queue, (Vertex a, Vertex b) -> (distance.get(a.getName()) == null ? 1 : distance.get(b.getName()) == null ? -1 : distance.get(a.getName()).compareTo(distance.get(b.getName()))));
 			queue.remove(min);
 			
-			System.out.println("Expanding vertex "+min.getName());
+			//System.out.println("Expanding vertex "+min.getName());
 			
 			for(Edge outgoing: min.getOutgoing()) {
 				if(min == destination || distance.get(min.getName()) == null)
@@ -237,7 +237,7 @@ public class Navigation {
 				
 				double newDist = distance.get(min.getName()).doubleValue() + (optimizeTime ? outgoing.time() + min.waitTime() : outgoing.distance());
 				if(distance.get(outgoing.to.getName()) == null || distance.get(outgoing.to.getName()).doubleValue() > newDist) {
-					System.out.println("Found new shortest path to "+outgoing.to.getName());
+					//System.out.println("Found new shortest path to "+outgoing.to.getName());
 					distance.put(outgoing.to.getName(), newDist);
 					prev.put(outgoing.to.getName(), min);
 				}
@@ -245,7 +245,8 @@ public class Navigation {
 		}
 		
 		if(distance.get(destination.getName()) == null)
-			throw new RuntimeException("Destination node unreachable");
+			return Double.POSITIVE_INFINITY;
+		
 		
 		if(embolden) {
 			Vertex current = destination;
@@ -268,7 +269,7 @@ public class Navigation {
 			res.add(vertex.toDotCode());
 		}
 		res.add("}");
-		System.out.println(res.stream().map(Object::toString).collect(Collectors.joining("\n")));
+		//System.out.println(res.stream().map(Object::toString).collect(Collectors.joining("\n")));
 		return res;
 	}
 
