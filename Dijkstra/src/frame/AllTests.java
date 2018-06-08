@@ -1,159 +1,28 @@
 package frame;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import java.util.Collections;
 
 import lab.Navigation;
 
+/**
+ * TestCases for the second lab. This class contains the static methods used by
+ * the test cases.
+ * 
+ * @author Stefan Kropp, Andreas Johansson
+ */
+// public class NavigationLabTestCase extends TestCase {
 public class AllTests {
+	
+	public static final Duration timeout = Duration.ofMillis(750);
 
-	private enum OutputFormat {
-		Distance, Time
+	public static enum OutputFormat {
+		Distance, Time, RouteDistance, RouteTime
 	};
-
-	@Nested
-	@DisplayName("Dijkstra TestFile1")
-	class TestFile1 {
-
-		@Test
-		@DisplayName("Test Distance from A to C")
-		public final void testFile1_A_C_Distance() {
-			assertEquals(8, testDistance("TestFile1", "A", "C"), "From A to C: ");
-		}
-
-		@Test
-		@DisplayName("Test Distance from A to G")
-		public final void testFile1_A_G_Distance() {
-			assertEquals(24, testDistance("TestFile1", "A", "G"), "From A to G: ");
-		}
-
-		@Test
-		@DisplayName("Test Time from A to D")
-		public final void testFile1_A_D_Time() {
-			assertEquals(14, testTime("TestFile1", "A", "D"), "From A to D: ");
-		}
-
-		@Test
-		@DisplayName("Test Time from A to F")
-		public final void testFile1_A_F_Time() {
-			assertEquals(18, testTime("TestFile1", "A", "F"), "From A to F: ");
-		}
-
-		@Test
-		@DisplayName("Test Shortest Route from A to E")
-		public final void testfile1_Route_A_E_Distance() {
-			ArrayList<String> route = new ArrayList<String>();
-			Navigation nav = new Navigation("TestFile1");
-			// Build the route we expect to find
-			route.add("A\\s*->\\s*C");
-			route.add("C\\s*->\\s*D");
-			route.add("D\\s*->\\s*E");
-			assertTrue(testRoute(nav.findShortestRoute("A", "E"), route), "Route not correct");
-		}
-
-		@Test
-		@DisplayName("Test Fastest Route from A to F")
-		public final void testfile1_Route_A_F_Time() {
-			ArrayList<String> route = new ArrayList<String>();
-			Navigation nav = new Navigation("TestFile1");
-			// Build the route we expect to find
-			route.add("A\\s*->\\s*C");
-			route.add("C\\s*->\\s*D");
-			route.add("D\\s*->\\s*F");
-			assertTrue(testRoute(nav.findFastestRoute("A", "F"), route), "Route not correct");
-		}
-
-	}
-
-	@Nested
-	@DisplayName("Dijkstra TestFile2")
-	class TestFile2 {
-
-		@Test
-		@DisplayName("Test Distance from A to C")
-		public final void testFile2_A_C_Distance() {
-			assertEquals(8, testDistance("TestFile2", "A", "C"), "From A to C: ");
-		}
-
-		@Test
-		@DisplayName("Test Distance from A to D")
-		public final void testFile2_A_D_Distance() {
-			assertEquals(12, testDistance("TestFile2", "A", "D"), "From A to D: ");
-		}
-
-		@Test
-		@DisplayName("Test Distance from A to F")
-		public final void testFile2_A_F_Distance() {
-			assertEquals(16, testDistance("TestFile2", "A", "F"), "From A to F: ");
-		}
-
-		@Test
-		@DisplayName("Test Time from A to C")
-		public final void testFile2_A_C_Time() {
-			assertEquals(8, testTime("TestFile2", "A", "C"), "From A to C: ");
-		}
-
-		@Test
-		@DisplayName("Test Time from A to E")
-		public final void testFile2_A_E_Time() {
-			assertEquals(15, testTime("TestFile2", "A", "E"), "From A to E: ");
-		}
-
-		@Test
-		@DisplayName("Test Time from A to F")
-		public final void testFile2_A_F_Time() {
-			assertEquals(12, testTime("TestFile2", "A", "F"), "From A to F: ");
-		}
-
-		@Test
-		@DisplayName("Test Number of Vertices on Shortest Route from A to B")
-		public final void testFile2_Size() {
-			Navigation nav = new Navigation("TestFile2");
-			assertEquals(16, nav.findShortestRoute("A", "B").size(), "Number of entries in output map: ");
-		}
-
-		@Test
-		@DisplayName("Test Missing vertex G")
-		public final void testFile2_Negative() {
-			Navigation nav = new Navigation("TestFile2");
-			assertEquals(-2, nav.findShortestDistance("A", "G"), "Test non-existing vertex: ");
-		}
-
-		@Test
-		@DisplayName("Test Shortest Route from A to E")
-		public final void testfile2_Route_A_E_Distance() {
-			ArrayList<String> route = new ArrayList<String>();
-			Navigation nav = new Navigation("TestFile2");
-			// Build the route we expect to find
-			route.add("A\\s*->\\s*B");
-			route.add("B\\s*->\\s*C");
-			route.add("C\\s*->\\s*D");
-			route.add("D\\s*->\\s*E");
-			assertTrue(testRoute(nav.findShortestRoute("A", "E"), route), "Route not correct");
-		}
-
-		@Test
-		@DisplayName("Test Fastest Route from A to E")
-		public final void testfile2_Route_A_E_Time() {
-			ArrayList<String> route = new ArrayList<>();
-			Navigation nav = new Navigation("TestFile2");
-			// Build the route we expect to find
-			route.add("A\\s*->\\s*B");
-			route.add("B\\s*->\\s*C");
-			route.add("C\\s*->\\s*E");
-			assertTrue(testRoute(nav.findFastestRoute("A", "E"), route), "Route not correct");
-		}
-
-	}
 
 	/**
 	 * This method returns the shortest distance from start to stop on the map
@@ -172,13 +41,13 @@ public class AllTests {
 	 *            Destination node
 	 * @return The shortest distance between start and stop in km
 	 */
-	private final int testDistance(String filename, String start, String stop) {
-		Navigation nav = new Navigation(filename);
-		ArrayList<String> returnMap = new ArrayList<String>();
+	public static final int testDistance(String filename, String start, String stop) {
+		Navigation lab = new Navigation(filename);
+		// ArrayList < String > returnMap = new ArrayList < String >();
 
-		returnMap = nav.findShortestRoute(start, stop);
-		writeGraphToFile(returnMap, filename, start, stop, OutputFormat.Distance);
-		return nav.findShortestDistance(start, stop);
+		// returnMap = lab.findShortestRoute(start,stop);
+		// writeGraphToFile(returnMap, filename, start, stop, OutputFormat.Distance);
+		return lab.findShortestDistance(start, stop);
 	}
 
 	/**
@@ -198,18 +67,19 @@ public class AllTests {
 	 *            Destination node
 	 * @return Fastest route in minutes
 	 */
-	private final int testTime(String filename, String start, String stop) {
-		Navigation nav = new Navigation(filename);
-		ArrayList<String> returnMap = new ArrayList<String>();
+	public static final int testTime(String filename, String start, String stop) {
+		Navigation lab = new Navigation(filename);
+		// ArrayList < String > returnMap = new ArrayList < String >();
 
-		returnMap = nav.findFastestRoute(start, stop);
-		writeGraphToFile(returnMap, filename, start, stop, OutputFormat.Time);
-		return nav.findFastestTime(start, stop);
+		// returnMap = lab.findFastestRoute(start,stop);
+		// writeGraphToFile(returnMap, filename, start, stop, OutputFormat.Time);
+		return lab.findFastestTime(start, stop);
 	}
 
 	/**
 	 * This method tests wether the edges contained in boldEdges are present and
-	 * marked as bold in map
+	 * marked as bold in map. It prints any edges not found bold to standard error.
+	 * It also prints the graph to a file with a fitting name.
 	 * 
 	 * @param map
 	 *            The map to check, in dot format
@@ -217,19 +87,63 @@ public class AllTests {
 	 *            The edges to find
 	 * @return True if all edges in boldEdges are marked bold in map
 	 */
-	private final boolean testRoute(ArrayList<String> map, ArrayList<String> boldEdges) {
+	public static final boolean testRoute(boolean positiveTest, ArrayList<String> map, ArrayList<String> boldEdges,
+			String filename, String start, String stop, OutputFormat format) {
+		boolean foundEdge = false;
+		;
 		boolean correct = true;
+		boolean tmpCorrect = true;
 		int matches = 0;
+
 		for (String edge : boldEdges) { // for all edges we're looking for
+			foundEdge = false;
 			for (String line : map) { // for all lines in the map
 				if (line.matches(".*" + edge + ".*")) { // if the edge is there
-					correct = correct && line.matches(".*bold.*"); // check if it is bold
+					tmpCorrect = line.matches(".*bold.*"); // check if it is bold
+					if (!tmpCorrect && positiveTest) {
+						System.err.println("[" + filename + "_route_" + start + "_" + stop
+								+ "] looked for bold for edge: '" + edge + "' but found '" + line + "'");
+					}
+					correct = correct && tmpCorrect;
 					matches++; // Count the number of bold lines correctly found
+					foundEdge = true;
+					break; // Let's not continue when we found one edge
 				}
+			}
+			if (!foundEdge && positiveTest) {
+				System.err.println("[" + filename + "_route_" + start + "_" + stop + "] Didn't find edge: " + edge);
 			}
 		}
 		// Check if we found all of them
 		correct = correct && (matches == boldEdges.size());
+		//writeGraphToFile(map, filename, start, stop, format);
+		return correct;
+	}
+
+	/**
+	 * Tests if any edges are marked as bold. Returns true if no edges are marked as
+	 * bold.
+	 * 
+	 * @param map
+	 * @param filename
+	 * @param start
+	 * @param stop
+	 * @param format
+	 * @return
+	 */
+	public static final boolean testNoRoute(ArrayList<String> map, String filename, String start, String stop,
+			OutputFormat format) {
+		boolean correct = true;
+
+		for (String line : map) { // for all lines in the map
+			if (line.matches(".*bold.*")) { // if the edge is there
+				correct = false;
+				System.err.println(
+						"[" + filename + "_route_" + start + "_" + stop + "] found unexpected bold edge: " + line);
+			}
+		}
+
+		// writeGraphToFile(map,filename,start,stop,format);
 		return correct;
 	}
 
@@ -239,9 +153,8 @@ public class AllTests {
 	 * The format of the filename of the file created depends on the last four
 	 * parameters:
 	 * 
-	 * if format = OutputFormat.Time: output_[filename]_from[start]to[stop]Time.txt
-	 * if format = OutputFormat.Distance:
-	 * output_[filename]_from[start]to[stop]Distance.txt
+	 * if format = OutputForma.Time: output_[filename]_from[start]to[stop]Time.txt
+	 * if format = OutputForma.Distance if format = OutputForma.Distance
 	 * 
 	 * @param map
 	 * @param filename
@@ -249,21 +162,30 @@ public class AllTests {
 	 * @param stop
 	 * @param format
 	 */
-	public final void writeGraphToFile(ArrayList<String> map, String filename, String start, String stop,
+	public static final void writeGraphToFile(ArrayList<String> map, String filename, String start, String stop,
 			OutputFormat format) {
 		try {
 			String typeString = null;
 			switch (format) {
 			case Distance:
-				typeString = "distance";
+				typeString = "_Distance";
 				break;
 			case Time:
-				typeString = "time";
+				typeString = "_Time";
+				break;
+			case RouteDistance:
+				typeString = "_RouteDistance";
+				break;
+			case RouteTime:
+				typeString = "_RouteTime";
 				break;
 			}
 
 			FileWriter fw = new FileWriter("output_" + filename + "_from" + start + "to" + stop + typeString + ".txt");
 			BufferedWriter bw = new BufferedWriter(fw);
+
+			if (map.size() > 2)
+				Collections.sort(map.subList(1, map.size() - 2));
 
 			for (String element : map) {
 				bw.write(element);
