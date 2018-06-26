@@ -3,7 +3,7 @@ package lab;
 import java.util.ArrayList;
 
 /**
- * Class representing a vertex ('street crossing' in this context) in a directed graph
+ * Class representing a vertex in a directed graph
  */
 public class Vertex {
 	
@@ -15,7 +15,6 @@ public class Vertex {
 	/**
 	 * Constructor
 	 * @param name Name of the vertex. Assumed to be per-graph unique
-	 * @param waitTime Average time spent waiting at this vertex
 	 */
 	public Vertex(String name) {
 		this.name = name;
@@ -51,17 +50,17 @@ public class Vertex {
 	}
 	
 	/**
-	 * Get a List of all outgoing edges of this vertex
-	 * @return
+	 * Get a List of all outgoing or incoming edges of this vertex (for analyzing the residual network)
+	 * @return List of all edges connecting to or from this vertex
 	 */
-	public ArrayList<Edge> getOutgoing() {
-		return outgoing;
-	}
-	
 	public ArrayList<Edge> getResidual() {
 		return allEdges;
 	}
 	
+	/**
+	 * Calculates the net flow in this vertex. Should be zero for all non-source non-drain vertices
+	 * @return Net flow of the vertex
+	 */
 	public int getTotalFlow() {
 		int res = 0;
 		for(Edge edge : outgoing)
